@@ -6,7 +6,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -46,7 +46,6 @@ services:
       timeout: 5s
       retries: 5
   auction-svc:
-    image: trycatchlearn/auction-svc:latest
     build: 
       context: .
       dockerfile: src/AuctionService/Dockerfile
@@ -70,7 +69,6 @@ services:
       rabbitmq:
         condition: service_started
   search-svc:
-    image: trycatchlearn/search-svc:latest
     build: 
       context: .
       dockerfile: src/SearchService/Dockerfile
@@ -88,7 +86,6 @@ services:
       mongodb:
         condition: service_healthy
   identity-svc:
-    image: trycatchlearn/identity-svc:latest
     build: 
       context: .
       dockerfile: src/IdentityService/Dockerfile
@@ -102,7 +99,6 @@ services:
       postgres:
         condition: service_healthy
   gateway-svc:
-    image: trycatchlearn/gateway-svc:latest
     build: 
       context: .
       dockerfile: src/GatewayService/Dockerfile
@@ -112,7 +108,6 @@ services:
     ports:
       - 6001:80
   bid-svc:
-    image: trycatchlearn/bid-svc:latest
     build: 
       context: .
       dockerfile: src/BiddingService/Dockerfile
@@ -131,7 +126,6 @@ services:
       mongodb:
         condition: service_healthy
   notify-svc:
-    image: trycatchlearn/notify-svc:latest
     build: 
       context: .
       dockerfile: src/NotificationService/Dockerfile
