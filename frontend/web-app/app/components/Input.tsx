@@ -20,10 +20,14 @@ export default function Input(props: Props) {
             <TextInput
                 {...props}
                 {...field}
-                value={field.value || ''}
+                value={field.value ?? ''}
                 type={props.type || 'text'}
                 placeholder={props.label}
                 color={fieldState?.error ? 'failure' : !fieldState.isDirty ? '' : 'success'}
+                onChange={(event) => {
+                    const value = event.target.value;
+                    field.onChange(props.type === 'number' && value !== '' ? Number(value) : value);
+                }}
             />
             <HelperText color="failure">
                 {fieldState.error?.message}

@@ -1,5 +1,6 @@
 'use server';
 
+import { auth } from "@/auth";
 import { fetchWrapper } from "@/lib/fetchWrapper";
 import { PagedResult, Auction, Bid } from "@/types";
 import { FieldValues } from "react-hook-form";
@@ -17,7 +18,13 @@ export async function updateAuctionTest(): Promise<{status: number, message: str
 }
 
 export async function createAuction(data: FieldValues) {
-    return fetchWrapper.post('auctions', data);
+    const session = await auth();
+
+    if (!session) {
+        return {error: {status: 401, message: 'You must be signed in to create an auction'}};
+    }
+
+    return fetchWrapper.post('auctions', normalizeAuctionPayload(data));
 }
 
 export async function getDetailedViewData(id: string): Promise<Auction> {
@@ -25,7 +32,7 @@ export async function getDetailedViewData(id: string): Promise<Auction> {
 }
 
 export async function updateAuction(data: FieldValues, id: string) {
-    return fetchWrapper.put(`auctions/${id}`, data);
+    return fetchWrapper.put(`auctions/${id}`, normalizeAuctionPayload(data));
 }
 
 export async function deleteAuction(id: string) {
@@ -38,4 +45,26 @@ export async function getBidsForAuction(id: string): Promise<Bid[]> {
 
 export async function placeBidForAuction(auctionId: string, amount: number) {
     return fetchWrapper.post(`bids?auctionId=${auctionId}&amount=${amount}`, {});
+}
+
+function normalizeAuctionPayload(data: FieldValues) {
+    const payload = {...data};
+
+    if (payload.year !== undefined && payload.year !== '') {
+        payload.year = Number(payload.year);
+    }
+
+    if (payload.mileage !== undefined && payload.mileage !== '') {
+        payload.mileage = Number(payload.mileage);
+    }
+
+    if (payload.reservePrice !== undefined && payload.reservePrice !== '') {
+        payload.reservePrice = Number(payload.reservePrice);
+    }
+
+    if (payload.auctionEnd instanceof Date) {
+        payload.auctionEnd = payload.auctionEnd.toISOString();
+    }
+
+    return payload;
 }

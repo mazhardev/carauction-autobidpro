@@ -55,10 +55,30 @@ async function handleResponse(response: Response) {
     } else {
         const error = {
             status: response.status,
-            message: typeof data === 'string' ? data : response.statusText
+            message: getErrorMessage(data, response.statusText)
         }
         return {error}
     }
+}
+
+function getErrorMessage(data: unknown, fallback: string) {
+    if (typeof data === 'string') return data;
+
+    if (data && typeof data === 'object') {
+        if ('errors' in data && data.errors && typeof data.errors === 'object') {
+            const messages = Object.values(data.errors)
+                .flat()
+                .filter((message): message is string => typeof message === 'string');
+
+            if (messages.length > 0) return messages.join('\n');
+        }
+
+        if ('title' in data && typeof data.title === 'string') {
+            return data.title;
+        }
+    }
+
+    return fallback;
 }
 
 async function getHeaders(): Promise<Headers> {
