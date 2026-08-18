@@ -32,10 +32,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.Authority = builder.Configuration["IdentityServiceUrl"];
-        options.RequireHttpsMetadata = false;
+        options.RequireHttpsMetadata = builder.Configuration
+            .GetValue("IdentityServiceRequireHttpsMetadata", false);
         options.TokenValidationParameters.ValidateAudience = false;
         options.TokenValidationParameters.NameClaimType = "username";
     });
+builder.Services.AddAuthorization();
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddHostedService<CheckAuctionFinished>();
 builder.Services.AddScoped<GrpcAuctionClient>();
@@ -43,7 +45,9 @@ builder.Services.AddScoped<GrpcAuctionClient>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-
+// UseAuthentication must run before UseAuthorization, otherwise [Authorize]
+// endpoints never see an authenticated User.Identity.
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

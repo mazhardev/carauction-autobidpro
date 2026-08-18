@@ -29,14 +29,19 @@ internal static class HostingExtensions
                 options.Events.RaiseFailureEvents = true;
                 options.Events.RaiseSuccessEvents = true;
 
-                if (builder.Environment.IsEnvironment("Docker"))
+                // Behind the compose network the browser reaches IdentityServer on a
+                // different host name than the containers do, so the issuer has to be
+                // pinned. Set IdentityServer__IssuerUri per environment.
+                var issuerUri = builder.Configuration["IdentityServer:IssuerUri"];
+
+                if (!string.IsNullOrWhiteSpace(issuerUri))
                 {
-                    options.IssuerUri = "http://localhost:5001";
+                    options.IssuerUri = issuerUri;
                 }
             })
             .AddInMemoryIdentityResources(Config.IdentityResources)
             .AddInMemoryApiScopes(Config.ApiScopes)
-            .AddInMemoryClients(Config.Clients)
+            .AddInMemoryClients(Config.Clients(builder.Configuration))
             .AddAspNetIdentity<ApplicationUser>()
             .AddLicenseSummary()
             .AddProfileService<CustomProfiileService>();

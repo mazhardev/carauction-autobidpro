@@ -42,15 +42,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options => 
     {
         options.Authority = builder.Configuration["IdentityServiceUrl"];
-        options.RequireHttpsMetadata = false;
+        options.RequireHttpsMetadata = builder.Configuration
+            .GetValue("IdentityServiceRequireHttpsMetadata", false);
         options.TokenValidationParameters.ValidateAudience = false;
         options.TokenValidationParameters.NameClaimType = "username";
     });
+builder.Services.AddAuthorization();
 builder.Services.AddGrpc();
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+// UseAuthentication must run before UseAuthorization so that [Authorize]
+// endpoints see the username claim as User.Identity.Name.
 app.UseAuthentication();
 app.UseAuthorization();
 

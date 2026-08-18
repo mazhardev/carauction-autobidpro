@@ -50,9 +50,15 @@ public class AuctionsController(AuctionDbContext context, IMapper mapper,
     [HttpPost]
     public async Task<ActionResult<AuctionDto>> CreateAuction([FromBody] CreateAuctionDto auctionDto)
     {
+        // The seller is always taken from the validated token; the request body has no
+        // seller field and anything a client sends is ignored.
+        var seller = User.Identity?.Name;
+
+        if (string.IsNullOrWhiteSpace(seller)) return Unauthorized();
+
         var auction = mapper.Map<Auction>(auctionDto);
 
-        auction.Seller = User.Identity?.Name ?? throw new InvalidOperationException("User not found");
+        auction.Seller = seller;
 
         context.Auctions.Add(auction);
 

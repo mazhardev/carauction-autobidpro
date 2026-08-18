@@ -2,6 +2,7 @@ using System;
 using AutoMapper;
 using BiddingService.DTOs;
 using BiddingService.Models;
+using BiddingService.RequestHelpers;
 using BiddingService.Services;
 using Contracts;
 using MassTransit;
@@ -20,6 +21,11 @@ public class BidsController(IMapper mapper, IPublishEndpoint publishEndpoint,
     [HttpPost]
     public async Task<ActionResult<BidDto>> PlaceBid(string auctionId, int amount)
     {
+        // The bidder identity always comes from the validated token, never from the request.
+        var bidder = User.Identity?.Name;
+
+        if (string.IsNullOrWhiteSpace(bidder)) return Unauthorized();
+
         var auction = await DB.Find<Auction>().OneAsync(auctionId);
 
         if (auction == null)
@@ -32,43 +38,31 @@ public class BidsController(IMapper mapper, IPublishEndpoint publishEndpoint,
             }
         }
 
-        if (auction.Seller == User.Identity?.Name)
+        if (BidRules.IsOwnAuction(auction.Seller, bidder))
         {
             return BadRequest("You cannot bid on your own item");
         }
 
-        if (User.Identity?.Name == null) return Unauthorized();
+        int? highestBidAmount = null;
 
-        var bid = new Bid()
-        {
-            Amount = amount,
-            AuctionId = auctionId,
-            Bidder = User.Identity.Name
-        };
-
-        if (auction.AuctionEnd < DateTime.UtcNow)
-        {
-            bid.BidStatus = BidStatus.Finished;
-        }
-        else
+        if (auction.AuctionEnd >= DateTime.UtcNow)
         {
             var highBid = await DB.Find<Bid>()
                 .Match(a => a.AuctionId == auctionId)
                 .Sort(b => b.Descending(x => x.Amount))
                 .ExecuteFirstAsync();
 
-            if (highBid != null && amount > highBid.Amount || highBid == null)
-            {
-                bid.BidStatus = amount > auction.ReservePrice
-                    ? BidStatus.Accepted
-                    : BidStatus.AcceptedBelowReserve;
-            }
-
-            if (highBid != null && bid.Amount <= highBid.Amount)
-            {
-                bid.BidStatus = BidStatus.TooLow;
-            }
+            highestBidAmount = highBid?.Amount;
         }
+
+        var bid = new Bid()
+        {
+            Amount = amount,
+            AuctionId = auctionId,
+            Bidder = bidder,
+            BidStatus = BidRules.DetermineStatus(auction.AuctionEnd, auction.ReservePrice, amount,
+                highestBidAmount)
+        };
 
         await DB.SaveAsync(bid);
 

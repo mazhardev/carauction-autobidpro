@@ -93,6 +93,10 @@ services:
       - ASPNETCORE_ENVIRONMENT=Docker
       - ASPNETCORE_URLS=http://+:80
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Username=postgres;Password=postgrespw;Database=identity
+      # Browsers reach IdentityServer on localhost:5001, so tokens must be issued
+      # with that issuer even though services resolve it as http://identity-svc.
+      - IdentityServer__IssuerUri=http://localhost:5001
+      - Clients__NextApp__RedirectUri=http://localhost:3000/api/auth/callback/id-server
     ports:
       - 5001:80
     depends_on:
